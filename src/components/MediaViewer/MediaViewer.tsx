@@ -2,10 +2,11 @@
 
 import {  useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Blend, ChevronLeft, ChevronDown, Crop, Info, Pencil, Trash2, Wand2, Image, Ban } from 'lucide-react';
-import { CldImage } from 'next-cloudinary';
+import { Blend, ChevronLeft, ChevronDown, Crop, Info, Pencil, Trash2, Wand2, Image, Ban, PencilRuler, ScissorsSquare } from 'lucide-react';
+import { CldImageProps } from 'next-cloudinary';
 
 import Container from '@/components/Container';
+import CldImage from '../CldImage';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -26,6 +27,22 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
   const [filterSheetIsOpen, setFilterSheetIsOpen] = useState(false);
   const [infoSheetIsOpen, setInfoSheetIsOpen] = useState(false);
   const [deletion, setDeletion] = useState<Deletion>();
+  const [enhancements, setEnhancements] = useState("None")
+
+  type Transformation = Omit<CldImageProps, "src" | "alt">
+  const transformations:Transformation = {}
+
+  switch(enhancements){
+    case 'restore':
+      transformations.restore = true
+      break
+    case 'improve':
+      transformations.improve = true
+      break
+    case 'Remove Background':
+      transformations.removeBackground = true
+      break
+  }
 
   // Canvas sizing based on the image dimensions. The tricky thing about
   // showing a single image in a space like this in a responsive way is trying
@@ -96,6 +113,13 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
     }
   }
 
+  console.log(resource)
+  const enhancementButtons = [
+    { label: "None", icon: <Ban className="w-5 h-5 mr-3" /> }, 
+    { label: "Improve", icon: <Wand2 className="w-5 h-5 mr-3" /> }, 
+    { label: "Restore", icon: <PencilRuler className="w-5 h-5 mr-3" /> }, 
+    { label: "Remove Background", icon: <ScissorsSquare className="w-5 h-5 mr-3" />}
+  ]
   return (
     <div className="h-screen bg-black px-0">
 
@@ -142,12 +166,20 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
                 <SheetTitle className="text-zinc-400 text-sm font-semibold">Enhancements</SheetTitle>
               </SheetHeader>
               <ul className="grid gap-2">
-                <li>
-                  <Button variant="ghost" className={`text-left justify-start w-full h-14 border-4 bg-zinc-700 border-white`}>
-                    <Ban className="w-5 h-5 mr-3" />
-                    <span className="text-[1.01rem]">None</span>
-                  </Button>
-                </li>
+                {
+                  enhancementButtons.map(d => {
+                    return (
+                      <li key={d.label}>
+                        <Button variant="ghost" className={`text-left justify-start w-full h-14 border-4 bg-zinc-700 ${enhancements === d.label?"border-white":"border-transparent"}`}
+                          onClick={()=>{setEnhancements(d.label)}}
+                        >
+                          { d.icon }
+                          <span className="text-[1.01rem]">{d.label}</span>
+                        </Button>
+                      </li>
+                    )
+                  })
+                }
               </ul>
             </TabsContent>
             <TabsContent value="crop">
@@ -295,12 +327,14 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
 
       <div className="relative flex justify-center items-center align-center w-full h-full">
         <CldImage
+          key={JSON.stringify(transformations)}
           className="object-contain"
           width={resource.width}
           height={resource.height}
           src={resource.public_id}
           alt=""
           style={imgStyles}
+          {...transformations}
         />
       </div>
     </div>
