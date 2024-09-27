@@ -4,27 +4,24 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, X, Save } from 'lucide-react';
 import { CldImage } from 'next-cloudinary'
+import { useResources } from '@/hooks/use-resources';
 
 import Container from '@/components/Container';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-
-interface CloudinaryResource {
-  width: number;
-  height: number;
-  public_id: string;
-  secure_url: string;
-}
+import { CloudinaryResource } from '@/app/types';
 
 interface MediaGalleryProps {
   resources: Array<CloudinaryResource>
 }
 
-const MediaGallery = ({ resources }: MediaGalleryProps) => {
+const MediaGallery = ({ resources: initialData }: MediaGalleryProps) => {
   const [selected, setSelected] = useState<Array<string>>([]);
   const [creation, setCreation] = useState();
+
+  const { resources } = useResources({initialData})
 
   /**
    * handleOnClearSelection
@@ -44,7 +41,7 @@ const MediaGallery = ({ resources }: MediaGalleryProps) => {
     }
   }
 
-  console.log(resources)
+  
   return (
     <>
       {/** Popup modal used to preview and confirm new creations */}
