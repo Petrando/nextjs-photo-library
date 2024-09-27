@@ -5,7 +5,7 @@ import { useResources } from "@/hooks/use-resources";
 import { CloudinaryResource } from "@/app/types";
 
 const UploadButton = () => {
-    const { addResources} = useResources()
+    const { addResources} = useResources({ disableFetch: true })
 
     const handleOnSuccess = (results: CloudinaryUploadWidgetResults) => {        
         addResources([ results.info as CloudinaryResource ])
@@ -15,7 +15,8 @@ const UploadButton = () => {
         <CldUploadButton 
             signatureEndpoint="/api/signed-cloudinary-params"
             options={{
-                autoMinimize: true
+                autoMinimize: true,
+                tags: [ String(process.env.NEXT_PUBLIC_CLOUDINARY_LIBRARY_TAG) ]
             }}
             onSuccess={handleOnSuccess}
         >

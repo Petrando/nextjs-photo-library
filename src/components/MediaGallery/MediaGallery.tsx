@@ -14,14 +14,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { CloudinaryResource } from '@/app/types';
 
 interface MediaGalleryProps {
-  resources: Array<CloudinaryResource>
+  resources: Array<CloudinaryResource>;
+  tag?: string;
 }
 
-const MediaGallery = ({ resources: initialData }: MediaGalleryProps) => {
+const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
   const [selected, setSelected] = useState<Array<string>>([]);
   const [creation, setCreation] = useState();
 
-  const { resources } = useResources({initialData})
+  const { resources } = useResources({ initialData, tag })
 
   /**
    * handleOnClearSelection
