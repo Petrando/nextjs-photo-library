@@ -31,9 +31,82 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
   const [deletion, setDeletion] = useState<Deletion>();
   const [enhancements, setEnhancements] = useState("None")
   const [ crop, setCrop ] = useState("Original")
+  const [ filterIdx, setFilterIdx ] = useState(0)    
+
+  /**
+   * closeMenus
+   * @description Closes all panel menus and dialogs
+   */
+
+  function closeMenus() {
+    setFilterSheetIsOpen(false)
+    setInfoSheetIsOpen(false)
+    setDeletion(undefined)
+  }
+
+  /**
+   * handleOnDeletionOpenChange
+   */
+
+  function handleOnDeletionOpenChange(isOpen: boolean) {
+    // Reset deletion dialog if the user is closing it
+    if ( !isOpen ) {
+      setDeletion(undefined);
+    }
+  }
+
+  // Listen for clicks outside of the panel area and if determined
+  // to be outside, close the panel. This is marked by using
+  // a data attribute to provide an easy way to reference it on
+  // multiple elements
+
+  useEffect(() => {
+    document.body.addEventListener('click', handleOnOutsideClick)
+    return () => {
+      document.body.removeEventListener('click', handleOnOutsideClick)
+    }
+  }, []);
+
+  function handleOnOutsideClick(event: MouseEvent) {
+    const excludedElements = Array.from(document.querySelectorAll('[data-exclude-close-on-click="true"]'));
+    const clickedExcludedElement = excludedElements.filter(element => event.composedPath().includes(element)).length > 0;
+
+    if ( !clickedExcludedElement ) {
+      closeMenus();
+    }
+  }
+  
+  const enhancementButtons = [
+    { label: "None", icon: <Ban className="w-5 h-5 mr-3" /> }, 
+    { label: "Improve", icon: <Wand2 className="w-5 h-5 mr-3" /> }, 
+    { label: "Restore", icon: <PencilRuler className="w-5 h-5 mr-3" /> }, 
+    { label: "Remove Background", icon: <ScissorsSquare className="w-5 h-5 mr-3" />}
+  ]
+
+  const cropAndResizes = [
+    { label: "Original", icon: <Image className="w-5 h-5 mr-3" /> }, 
+    { label: "Square", icon: <Square className="w-5 h-5 mr-3" /> }, 
+    { label: "Landscape", icon: <RectangleHorizontal className="w-5 h-5 mr-3" /> }, 
+    { label: "Portrait", icon: <RectangleVertical className="w-5 h-5 mr-3" />}
+  ]
+
+  const filters = [
+    {
+       type:"No Filter", filter:{},
+    },
+    {
+      type:"Sepia", filter:{ sepia: true },
+    },
+    {
+      type:"Sizzle Art", filter:{ art: 'sizzle' },
+    },
+    {
+      type:"Grayscale", filter:{ grayscale: true },
+    }
+  ]
 
   type Transformation = Omit<CldImageProps, "src" | "alt">
-  const transformations:Transformation = {}
+  const transformations:Transformation = { ...filters[filterIdx].filter }
 
   switch(enhancements){
     case 'restore':
@@ -94,62 +167,6 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
     imgStyles.width = 'auto'
   }
 
-  /**
-   * closeMenus
-   * @description Closes all panel menus and dialogs
-   */
-
-  function closeMenus() {
-    setFilterSheetIsOpen(false)
-    setInfoSheetIsOpen(false)
-    setDeletion(undefined)
-  }
-
-  /**
-   * handleOnDeletionOpenChange
-   */
-
-  function handleOnDeletionOpenChange(isOpen: boolean) {
-    // Reset deletion dialog if the user is closing it
-    if ( !isOpen ) {
-      setDeletion(undefined);
-    }
-  }
-
-  // Listen for clicks outside of the panel area and if determined
-  // to be outside, close the panel. This is marked by using
-  // a data attribute to provide an easy way to reference it on
-  // multiple elements
-
-  useEffect(() => {
-    document.body.addEventListener('click', handleOnOutsideClick)
-    return () => {
-      document.body.removeEventListener('click', handleOnOutsideClick)
-    }
-  }, []);
-
-  function handleOnOutsideClick(event: MouseEvent) {
-    const excludedElements = Array.from(document.querySelectorAll('[data-exclude-close-on-click="true"]'));
-    const clickedExcludedElement = excludedElements.filter(element => event.composedPath().includes(element)).length > 0;
-
-    if ( !clickedExcludedElement ) {
-      closeMenus();
-    }
-  }
-  
-  const enhancementButtons = [
-    { label: "None", icon: <Ban className="w-5 h-5 mr-3" /> }, 
-    { label: "Improve", icon: <Wand2 className="w-5 h-5 mr-3" /> }, 
-    { label: "Restore", icon: <PencilRuler className="w-5 h-5 mr-3" /> }, 
-    { label: "Remove Background", icon: <ScissorsSquare className="w-5 h-5 mr-3" />}
-  ]
-
-  const cropAndResizes = [
-    { label: "Original", icon: <Image className="w-5 h-5 mr-3" /> }, 
-    { label: "Square", icon: <Square className="w-5 h-5 mr-3" /> }, 
-    { label: "Landscape", icon: <RectangleHorizontal className="w-5 h-5 mr-3" /> }, 
-    { label: "Portrait", icon: <RectangleVertical className="w-5 h-5 mr-3" />}
-  ]
   return (
     <div className="h-screen bg-black px-0">
 
@@ -240,16 +257,27 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
                 <SheetTitle className="text-zinc-400 text-sm font-semibold">Filters</SheetTitle>
               </SheetHeader>
               <ul className="grid grid-cols-2 gap-2">
-                <li>
-                  <button className={`w-full border-4 border-white`}>
-                    <img
-                      width={resource.width}
-                      height={resource.height}
-                      src="/icon-1024x1024.png"
-                      alt="No Filter"
-                    />
-                  </button>
-                </li>
+                {
+                  filters.map((d, i) => {
+                    const isActive = filterIdx === i
+                    return (
+                      <li key={d.type}>
+                        <button className={`w-full border-4 ${isActive?'border-white':'border-transparent'}`}
+                          onClick={()=>{setFilterIdx(i)}}
+                        >
+                          <CldImage
+                            width={156}
+                            height={156}
+                            crop='fill'
+                            src={ resource.public_id }
+                            alt={d.type}
+                            {...d.filter}
+                          />
+                        </button>
+                      </li>
+                    )
+                  })
+                }                
               </ul>
             </TabsContent>
           </Tabs>
