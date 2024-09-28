@@ -2,7 +2,9 @@
 
 import {  useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Blend, ChevronLeft, ChevronDown, Crop, Info, Pencil, Trash2, Wand2, Image, Ban, PencilRuler, ScissorsSquare } from 'lucide-react';
+import { 
+  Blend, ChevronLeft, ChevronDown, Crop, Info, Pencil, Trash2, Wand2, Image, Ban, PencilRuler, ScissorsSquare, Square, RectangleHorizontal,
+    RectangleVertical } from 'lucide-react';
 import { CldImageProps } from 'next-cloudinary';
 
 import Container from '@/components/Container';
@@ -28,6 +30,7 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
   const [infoSheetIsOpen, setInfoSheetIsOpen] = useState(false);
   const [deletion, setDeletion] = useState<Deletion>();
   const [enhancements, setEnhancements] = useState("None")
+  const [ crop, setCrop ] = useState("Original")
 
   type Transformation = Omit<CldImageProps, "src" | "alt">
   const transformations:Transformation = {}
@@ -44,6 +47,27 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
       break
   }
 
+  switch(crop){
+    case 'Square':
+      if(resource.width > resource.height){
+        transformations.height = resource.width
+      } else {
+        transformations.width = resource.height
+      }
+      
+      break;
+    case 'Landscape':
+      transformations.height = Math.floor(resource.width / (16/9))
+      break;
+    case 'Portrait':
+      transformations.width = Math.floor(resource.height / (16/9))
+      break;
+  }
+
+  if(crop !== 'Original'){
+    transformations.crop = { source: true, type: 'fill' }
+  }
+
   // Canvas sizing based on the image dimensions. The tricky thing about
   // showing a single image in a space like this in a responsive way is trying
   // to take up as much room as possible without distorting it or upscaling
@@ -51,8 +75,8 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
   // determine whether it's landscape, portrait, or square, and change a little
   // CSS to make it appear centered and scalable!
 
-  const canvasHeight = resource.height;
-  const canvasWidth = resource.width;
+  const canvasHeight = transformations.height || resource.height;
+  const canvasWidth = transformations.width || resource.width;
 
   const isSquare = canvasHeight === canvasWidth;
   const isLandscape = canvasWidth > canvasHeight;
@@ -112,13 +136,19 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
       closeMenus();
     }
   }
-
-  console.log(resource)
+  
   const enhancementButtons = [
     { label: "None", icon: <Ban className="w-5 h-5 mr-3" /> }, 
     { label: "Improve", icon: <Wand2 className="w-5 h-5 mr-3" /> }, 
     { label: "Restore", icon: <PencilRuler className="w-5 h-5 mr-3" /> }, 
     { label: "Remove Background", icon: <ScissorsSquare className="w-5 h-5 mr-3" />}
+  ]
+
+  const cropAndResizes = [
+    { label: "Original", icon: <Image className="w-5 h-5 mr-3" /> }, 
+    { label: "Square", icon: <Square className="w-5 h-5 mr-3" /> }, 
+    { label: "Landscape", icon: <RectangleHorizontal className="w-5 h-5 mr-3" /> }, 
+    { label: "Portrait", icon: <RectangleVertical className="w-5 h-5 mr-3" />}
   ]
   return (
     <div className="h-screen bg-black px-0">
@@ -187,12 +217,22 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
                 <SheetTitle className="text-zinc-400 text-sm font-semibold">Cropping & Resizing</SheetTitle>
               </SheetHeader>
               <ul className="grid gap-2">
-                <li>
-                  <Button variant="ghost" className={`text-left justify-start w-full h-14 border-4 bg-zinc-700 border-white`}>
-                    <Image className="w-5 h-5 mr-3" />
-                    <span className="text-[1.01rem]">Original</span>
-                  </Button>
-                </li>
+                {
+                  cropAndResizes.map(d => {
+                    return (
+                      <li key={d.label}>
+                        <Button 
+                          variant="ghost" 
+                          className={`text-left justify-start w-full h-14 border-4 bg-zinc-700 ${crop === d.label?"border-white":"border-transparent"}`}
+                          onClick={()=>{setCrop(d.label)}}
+                        >
+                          {d.icon}
+                          <span className="text-[1.01rem]">{ d.label }</span>
+                        </Button>
+                      </li>
+                    )
+                  })
+                }
               </ul>
             </TabsContent>
             <TabsContent value="filters">
