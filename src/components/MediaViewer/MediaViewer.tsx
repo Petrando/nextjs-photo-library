@@ -2,10 +2,11 @@
 
 import {  useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   Blend, ChevronLeft, ChevronDown, Crop, Info, Pencil, Trash2, Wand2, Image, Ban, PencilRuler, ScissorsSquare, Square, RectangleHorizontal,
-    RectangleVertical } from 'lucide-react';
-import { CldImageProps } from 'next-cloudinary';
+    RectangleVertical, Loader2 } from 'lucide-react';
+import { CldImageProps, getCldImageUrl } from 'next-cloudinary';
 
 import Container from '@/components/Container';
 import CldImage from '../CldImage';
@@ -26,10 +27,12 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
 
   // Sheet / Dialog UI state, basically controlling keeping them open or closed
 
-  const [filterSheetIsOpen, setFilterSheetIsOpen] = useState(false);
-  const [infoSheetIsOpen, setInfoSheetIsOpen] = useState(false);
-  const [deletion, setDeletion] = useState<Deletion>();
-  const [enhancements, setEnhancements] = useState("None")
+  const [ filterSheetIsOpen, setFilterSheetIsOpen ] = useState(false);
+  const [ infoSheetIsOpen, setInfoSheetIsOpen ] = useState(false);
+  const [ deletion, setDeletion ] = useState<Deletion>();
+
+  const [ version, setVersion ] = useState(1)
+  const [ enhancements, setEnhancements ] = useState("None")
   const [ crop, setCrop ] = useState("Original")
   const [ filterIdx, setFilterIdx ] = useState(0)    
 
@@ -42,6 +45,12 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
     setFilterSheetIsOpen(false)
     setInfoSheetIsOpen(false)
     setDeletion(undefined)
+  }
+
+  const resetChanges = () => {
+    setEnhancements("None")
+    setCrop("Original")
+    setFilterIdx(0)
   }
 
   /**
@@ -74,8 +83,8 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
     if ( !clickedExcludedElement ) {
       closeMenus();
     }
-  }
-  
+  }  
+
   const enhancementButtons = [
     { label: "None", icon: <Ban className="w-5 h-5 mr-3" /> }, 
     { label: "Improve", icon: <Wand2 className="w-5 h-5 mr-3" /> }, 
@@ -141,6 +150,69 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
     transformations.crop = { source: true, type: 'fill' }
   }
 
+  const imageTransformed = Object.entries(transformations).length > 0
+
+  const router = useRouter()
+  
+  const getImageUrl = () => {
+    const url = getCldImageUrl({
+      width: resource.width,
+      height: resource.height,
+      src: resource.public_id,       
+      format: 'default',
+      quality: 'default', 
+      ...transformations        
+    })
+
+    return url
+  }
+
+  const handleOnSave = async () => {
+    const url = getImageUrl()
+
+    await fetch(url)
+
+    const result = await fetch(`/api/upload`, {
+      method: 'POST',
+      body: JSON.stringify({ publicId: resource.public_id, url })
+    })
+    .then(res => {
+      return res.json()
+    })
+    
+    closeMenus()
+    resetChanges()
+    setVersion(Date.now())
+  }
+
+  const handleOnSaveCopy = async () => {  
+    const url = getImageUrl()
+
+    await fetch(url)
+
+    const { data } = await fetch(`/api/upload`, {
+      method: 'POST',
+      body: JSON.stringify({ url })
+    })
+    .then(res => {
+      return res.json()
+    })
+
+    router.push(`/resources/${data.asset_id}`)
+    
+  }
+
+  const handleDelete = async () => {
+    setDeletion({ state: 'deleting' })
+    const result = await fetch(`/api/delete`, {
+      method: 'DELETE',
+      body: JSON.stringify({ publicId: resource.public_id })
+    })
+
+    console.log(`delete result : ${result}`)
+    router.push("/")
+  }
+
   // Canvas sizing based on the image dimensions. The tricky thing about
   // showing a single image in a space like this in a responsive way is trying
   // to take up as much room as possible without distorting it or upscaling
@@ -172,14 +244,19 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
 
       {/** Modal for deletion */}
 
-      <Dialog open={!!deletion?.state} onOpenChange={handleOnDeletionOpenChange}>
+      <Dialog open={!!deletion?.state && ['confirm', 'deleting'].includes(deletion?.state)} onOpenChange={handleOnDeletionOpenChange}>
         <DialogContent data-exclude-close-on-click={true}>
           <DialogHeader>
             <DialogTitle className="text-center">Are you sure you want to delete?</DialogTitle>
           </DialogHeader>
           <DialogFooter className="justify-center sm:justify-center">
-            <Button variant="destructive">
-              <Trash2 className="h-4 w-4 mr-2" /> Delete
+            <Button variant="destructive" onClick={handleDelete} disabled={deletion?.state === 'deleting'}>
+              {
+                deletion?.state === 'deleting'?
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />:
+                    <Trash2 className="h-4 w-4 mr-2" />
+              }
+               Delete
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -282,41 +359,50 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
             </TabsContent>
           </Tabs>
           <SheetFooter className="gap-2 sm:flex-col">
-            <div className="grid grid-cols-[1fr_4rem] gap-2">
-              <Button
-                variant="ghost"
-                className="w-full h-14 text-left justify-center items-center bg-blue-500"
-              >
-                <span className="text-[1.01rem]">
-                  Save
-                </span>
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="w-full h-14 text-left justify-center items-center bg-blue-500"
-                  >
-                    <span className="sr-only">More Options</span>
-                    <ChevronDown className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" data-exclude-close-on-click={true}>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem>
-                      <span>Save as Copy</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            {
+              imageTransformed && 
+              <div className="grid grid-cols-[1fr_4rem] gap-2">
+                <Button
+                  variant="ghost"
+                  className="w-full h-14 text-left justify-center items-center bg-blue-500"
+                  onClick={handleOnSave}
+                >
+                  <span className="text-[1.01rem]">
+                    Save
+                  </span>
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="w-full h-14 text-left justify-center items-center bg-blue-500"                      
+                    >
+                      <span className="sr-only">More Options</span>
+                      <ChevronDown className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" data-exclude-close-on-click={true}>
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        onClick={handleOnSaveCopy}
+                      >
+                        <span>Save as Copy</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            }
             <Button
               variant="outline"
-              className="w-full h-14 text-left justify-center items-center bg-transparent border-zinc-600"
-              onClick={() => closeMenus()}
+              className={`w-full h-14 text-left justify-center items-center bg-transparent ${imageTransformed?"bg-red-500":"border-zinc-600"}`}
+              onClick={() => {
+                closeMenus()
+                resetChanges()
+              }}
             >
               <span className="text-[1.01rem]">
-                Close
+                { imageTransformed?"Cancel":"Close" }
               </span>
             </Button>
           </SheetFooter>
@@ -395,11 +481,12 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
 
       <div className="relative flex justify-center items-center align-center w-full h-full">
         <CldImage
-          key={JSON.stringify(transformations)}
+          key={`${JSON.stringify(transformations)} - ${version}`}
           className="object-contain"
           width={resource.width}
           height={resource.height}
           src={resource.public_id}
+          version={version}
           alt=""
           style={imgStyles}
           {...transformations}
