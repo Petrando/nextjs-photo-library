@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, X, Save } from 'lucide-react';
+import { getCldImageUrl } from 'next-cloudinary';
 import CldImage from '../CldImage';
 import { useResources } from '@/hooks/use-resources';
 
@@ -12,17 +13,32 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { CloudinaryResource } from '@/app/types';
+import { getCollage } from '@/lib/creations';
 
 interface MediaGalleryProps {
   resources: Array<CloudinaryResource>;
   tag?: string;
 }
 
+interface Creation {
+  state: string;
+  url: string;
+  type: string;
+}
+
 const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
   const [selected, setSelected] = useState<Array<string>>([]);
-  const [creation, setCreation] = useState();
+  const [creation, setCreation] = useState<Creation>();
 
   const { resources } = useResources({ initialData, tag })
+  
+  const handleCreateCollage = () => {
+    const url = getCollage(selected)
+    setCreation({
+      state:"created", url, type: "collage"
+    })
+   
+  }
 
   /**
    * handleOnClearSelection
@@ -52,6 +68,20 @@ const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
           <DialogHeader>
             <DialogTitle>Save your creation?</DialogTitle>
           </DialogHeader>
+          {
+            creation?.url && (
+              <div>
+                <CldImage
+                  width={1200}
+                  height={1200}
+                  crop={{ type:'fill', source: true }}
+                  src={creation.url}
+                  alt='Creation'
+                  preserveTransformations
+                />
+              </div>
+            )
+          }
           <DialogFooter className="justify-end sm:justify-end">
             <Button>
               <Save className="h-4 w-4 mr-2" />
@@ -89,9 +119,12 @@ const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56">
                   <DropdownMenuGroup>
-                    <DropdownMenuItem>
-                      <span>Option</span>
-                    </DropdownMenuItem>
+                    {
+                      selected.length >= 2 &&
+                        <DropdownMenuItem onClick={handleCreateCollage}>
+                          <span>Collage</span>
+                        </DropdownMenuItem>
+                    }
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
