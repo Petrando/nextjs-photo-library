@@ -3,7 +3,7 @@ import MediaViewer from '@/components/MediaViewer';
 
 async function Resource( {params:{assetId}}: { params: { assetId: string}} ) {
   
-  const { resources } = await cloudinary.api.resources_by_asset_ids(assetId)
+  const { resources } = await cloudinary.api.resources_by_asset_ids(assetId, { tags: true} )
   
   return (
     <MediaViewer

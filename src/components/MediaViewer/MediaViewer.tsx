@@ -7,6 +7,7 @@ import {
   Blend, ChevronLeft, ChevronDown, Crop, Info, Pencil, Trash2, Wand2, Image, Ban, PencilRuler, ScissorsSquare, Square, RectangleHorizontal,
     RectangleVertical, Loader2 } from 'lucide-react';
 import { CldImageProps, getCldImageUrl } from 'next-cloudinary';
+import { useQueryClient } from '@tanstack/react-query';
 
 import Container from '@/components/Container';
 import CldImage from '../CldImage';
@@ -15,6 +16,8 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
+import { addCommas, formatBytes } from '@/lib/utils';
 import { CloudinaryResource } from '@/app/types';
 
 interface Deletion {
@@ -22,6 +25,8 @@ interface Deletion {
 }
 
 const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
+  const queryClient = useQueryClient()
+
   const sheetFiltersRef = useRef<HTMLDivElement | null>(null);
   const sheetInfoRef = useRef<HTMLDivElement | null>(null);
 
@@ -114,6 +119,28 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
     }
   ]
 
+  const info = [
+    { label: "ID", content: resource.public_id},
+    {
+      label: "Date Created", content: new Date(resource.created_at).toLocaleString()
+    },
+    {
+      label: "Width", content: addCommas(resource.width)
+    },
+    {
+      label: "Height", content: addCommas(resource.height)
+    },
+    {
+      label: "Format", content: resource.format
+    },
+    {
+      label: "Size", content: formatBytes(resource.bytes)
+    },
+    {
+      label: "Tags", content: resource.tags.join(", ")
+    }
+  ]
+
   type Transformation = Omit<CldImageProps, "src" | "alt">
   const transformations:Transformation = { ...filters[filterIdx].filter }
 
@@ -198,6 +225,8 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
       return res.json()
     })
 
+    invalidateQueries()
+
     router.push(`/resources/${data.asset_id}`)
     
   }
@@ -209,8 +238,15 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
       body: JSON.stringify({ publicId: resource.public_id })
     })
 
-    console.log(`delete result : ${result}`)
+    invalidateQueries()
+
     router.push("/")
+  }
+
+  const invalidateQueries = () => {
+    queryClient.invalidateQueries({
+      queryKey: ['resources', String(process.env.NEXT_PUBLIC_CLOUDINARY_LIBRARY_TAG)]
+    })
   }
 
   // Canvas sizing based on the image dimensions. The tricky thing about
@@ -422,12 +458,18 @@ const MediaViewer = ({ resource }: { resource: CloudinaryResource }) => {
           </SheetHeader>
           <div>
             <ul>
-              <li className="mb-3">
-                <strong className="block text-xs font-normal text-zinc-400 mb-1">ID</strong>
-                <span className="flex gap-4 items-center text-zinc-100">
-                  { resource.public_id }
-                </span>
-              </li>
+              {
+                info.map(d => {
+                  return (
+                    <li className="mb-3" key={d.label}>
+                    <strong className="block text-xs font-normal text-zinc-400 mb-1">{d.label}</strong>
+                    <span className="flex gap-4 items-center text-zinc-100">
+                      { d.content }
+                    </span>
+                  </li>
+                  )
+                })
+              }
             </ul>
           </div>
           <SheetFooter>

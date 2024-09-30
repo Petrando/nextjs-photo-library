@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, X, Save } from 'lucide-react';
-import { CldImage } from 'next-cloudinary'
+import CldImage from '../CldImage';
 import { useResources } from '@/hooks/use-resources';
 
 import Container from '@/components/Container';
@@ -23,7 +23,6 @@ const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
   const [creation, setCreation] = useState();
 
   const { resources } = useResources({ initialData, tag })
-  console.log(resources)
 
   /**
    * handleOnClearSelection
