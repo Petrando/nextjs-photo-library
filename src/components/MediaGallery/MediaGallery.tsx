@@ -13,7 +13,7 @@ import { Loader2 } from 'lucide-react';
 import Container from '@/components/Container';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getCollage } from '@/lib/creations';
+import { getCollage, getAnimation } from '@/lib/creations';
 import { CloudinaryResource } from '@/app/types';
 
 
@@ -24,7 +24,7 @@ interface MediaGalleryProps {
 
 interface Creation {
   state: string;
-  url: string;
+  url?: string;
   type: string;
 }
 
@@ -47,30 +47,69 @@ const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
    
   }
 
+  const handleCreateAnimation = () => {
+    try{
+      const url = getAnimation(selected)      
+      setCreation({
+        state:"created", url, type: "animation"
+      })
+    }
+    catch(err){
+      console.log(err)
+
+    }
+  }
+
+  const handleCreateColorPop = async () => {
+    setCreation({
+      state:"creating", url: undefined, type: "color-pop"
+    })
+    try{
+      const { data: url } = await fetch('/api/creations/color-pop', {
+        method: 'POST',
+        body: JSON.stringify({ publicId: selected[0]})
+      })
+      .then(r => r.json())
+                        
+      setCreation({
+        state:"created", url, type: "color-pop"
+      })
+    }
+    catch(err){
+      console.log(err)
+
+    }
+  }
+
   const handleSave = async () => {
     if( typeof creation?.url !== 'string'){
       return
     }
 
-    setCreation((prev) => {
-      if(!prev){ return }
-      return {
-      ...prev, state: "saving"
-      }
-    })
-    await fetch(creation.url)
-
-    const { data } = await fetch('/api/upload', {
-      method: 'POST',
-      body: JSON.stringify({
-        url: creation.url
+    try{
+      setCreation((prev) => {
+        if(!prev){ return }
+        return {
+        ...prev, state: "saving"
+        }
       })
-    }).then(res => res.json())
-
-    console.log(data)
-    addResources([ data ])
-    setCreation( undefined )
-    setSelected([]) 
+      await fetch(creation.url)
+  
+      const { data } = await fetch('/api/upload', {
+        method: 'POST',
+        body: JSON.stringify({
+          url: creation.url
+        })
+      }).then(res => res.json())
+      
+      addResources([ data ])
+      setCreation( undefined )
+      setSelected([])
+    }
+    catch(err){
+      console.log(err)
+    }
+     
   }
 
   /**
@@ -90,7 +129,6 @@ const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
       setCreation(undefined);
     }
   }
-
   
   return (
     <>
@@ -98,33 +136,44 @@ const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
 
       <Dialog open={!!creation} onOpenChange={handleOnCreationOpenChange}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Save your creation?</DialogTitle>
-          </DialogHeader>
           {
-            creation?.url && (
-              <div>
-                <CldImage
-                  width={1200}
-                  height={1200}
-                  crop={{ type:'fill', source: true }}
-                  src={creation.url}
-                  alt='Creation'
-                  preserveTransformations
-                />
+            creation?.state && ['creating'].includes(creation.state) &&
+              <div className='w-full py-4 flex items-center justify-center'>
+                <Loader2 className="h-12 w-12 animate-spin" />
               </div>
-            )
           }
-          <DialogFooter className="justify-end sm:justify-end">
-            <Button onClick={handleSave} disabled={creation?.state === 'saving'}>
-              {
-                creation?.state === 'saving'?
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />:
-                    <Save className="h-4 w-4 mr-2" />
-              }              
-              Save to Library
-            </Button>
-          </DialogFooter>
+          {
+            creation?.state && ['created', 'saving'].includes(creation.state) &&
+            <>
+            <DialogHeader>
+            <DialogTitle>Save your creation?</DialogTitle>
+            </DialogHeader>
+            {
+              creation?.url && (
+                <div>
+                  <CldImage
+                    width={1200}
+                    height={1200}
+                    src={creation.url}
+                    alt='Creation'
+                    preserveTransformations
+                  />
+                </div>
+              )
+            }
+            <DialogFooter className="justify-end sm:justify-end">
+              <Button onClick={handleSave} disabled={creation?.state === 'saving'}>
+                {
+                  creation?.state === 'saving'?
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />:
+                      <Save className="h-4 w-4 mr-2" />
+                }              
+                Save to Library
+              </Button>
+            </DialogFooter>
+            </> 
+          }
+          
         </DialogContent>
       </Dialog>
 
@@ -161,6 +210,17 @@ const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
                         <DropdownMenuItem onClick={handleCreateCollage}>
                           <span>Collage</span>
                         </DropdownMenuItem>
+                    }
+                    {
+                      selected.length < 2 &&
+                      <>
+                        <DropdownMenuItem onClick={handleCreateAnimation}>
+                          <span>Animation</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleCreateColorPop}>
+                          <span>Color Pop</span>
+                        </DropdownMenuItem>
+                      </>
                     }
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
