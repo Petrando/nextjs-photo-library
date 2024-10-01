@@ -7,13 +7,15 @@ import { getCldImageUrl } from 'next-cloudinary';
 import CldImage from '../CldImage';
 import { useResources } from '@/hooks/use-resources';
 
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Loader2 } from 'lucide-react';
 import Container from '@/components/Container';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { CloudinaryResource } from '@/app/types';
 import { getCollage } from '@/lib/creations';
+import { CloudinaryResource } from '@/app/types';
+
 
 interface MediaGalleryProps {
   resources: Array<CloudinaryResource>;
@@ -30,14 +32,45 @@ const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
   const [selected, setSelected] = useState<Array<string>>([]);
   const [creation, setCreation] = useState<Creation>();
 
-  const { resources } = useResources({ initialData, tag })
+  const { resources, addResources } = useResources({ initialData, tag })
   
   const handleCreateCollage = () => {
-    const url = getCollage(selected)
-    setCreation({
-      state:"created", url, type: "collage"
-    })
+    try{
+      const url = getCollage(selected)
+      setCreation({
+        state:"created", url, type: "collage"
+      })
+    }
+    catch(err){
+
+    }
    
+  }
+
+  const handleSave = async () => {
+    if( typeof creation?.url !== 'string'){
+      return
+    }
+
+    setCreation((prev) => {
+      if(!prev){ return }
+      return {
+      ...prev, state: "saving"
+      }
+    })
+    await fetch(creation.url)
+
+    const { data } = await fetch('/api/upload', {
+      method: 'POST',
+      body: JSON.stringify({
+        url: creation.url
+      })
+    }).then(res => res.json())
+
+    console.log(data)
+    addResources([ data ])
+    setCreation( undefined )
+    setSelected([]) 
   }
 
   /**
@@ -83,8 +116,12 @@ const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
             )
           }
           <DialogFooter className="justify-end sm:justify-end">
-            <Button>
-              <Save className="h-4 w-4 mr-2" />
+            <Button onClick={handleSave} disabled={creation?.state === 'saving'}>
+              {
+                creation?.state === 'saving'?
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />:
+                    <Save className="h-4 w-4 mr-2" />
+              }              
               Save to Library
             </Button>
           </DialogFooter>

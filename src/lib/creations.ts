@@ -101,6 +101,7 @@ const collageTemplates: Record<number, Function> = {
             }
         }
 }
+
 export const getCollage = ( publicIds: Array<string>) => {
     const template = collageTemplates[publicIds.length]    
 
