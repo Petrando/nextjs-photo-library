@@ -9,7 +9,7 @@ import { useResources } from '@/hooks/use-resources';
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Loader2 } from 'lucide-react';
+import { Loader2, SquareStack, Droplet, LayoutPanelLeft } from 'lucide-react';
 import Container from '@/components/Container';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -98,7 +98,8 @@ const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
       const { data } = await fetch('/api/upload', {
         method: 'POST',
         body: JSON.stringify({
-          url: creation.url
+          url: creation.url, 
+          tags: [ String(process.env.NEXT_PUBLIC_CLOUDINARY_CREATIONS_TAG) ]
         })
       }).then(res => res.json())
       
@@ -208,16 +209,19 @@ const MediaGallery = ({ resources: initialData, tag }: MediaGalleryProps) => {
                     {
                       selected.length >= 2 &&
                         <DropdownMenuItem onClick={handleCreateCollage}>
+                          <LayoutPanelLeft className='w-4 h-4 mr-2' />
                           <span>Collage</span>
                         </DropdownMenuItem>
                     }
                     {
                       selected.length < 2 &&
                       <>
-                        <DropdownMenuItem onClick={handleCreateAnimation}>
+                        <DropdownMenuItem onClick={handleCreateAnimation}>                          
+                          <SquareStack className='w-4 h-4 mr-2' />
                           <span>Animation</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleCreateColorPop}>
+                          <Droplet className='w-4 h-4 mr-2' />
                           <span>Color Pop</span>
                         </DropdownMenuItem>
                       </>

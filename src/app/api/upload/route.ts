@@ -1,7 +1,7 @@
 import { cloudinary } from "@/libs/cloudinary-config";
 
 export async function POST (req: Request){
-    const { url, publicId } = await req.json()
+    const { url, publicId, tags = [] } = await req.json()
     
     const uploadOptions: Record<string, string | boolean | Array<string>> = {}
 
@@ -9,7 +9,10 @@ export async function POST (req: Request){
         uploadOptions.public_id = publicId
         uploadOptions.invalidate = true
     }else {
-        uploadOptions.tags = [ String(process.env.NEXT_PUBLIC_CLOUDINARY_LIBRARY_TAG) ]
+        uploadOptions.tags = [ 
+            String(process.env.NEXT_PUBLIC_CLOUDINARY_LIBRARY_TAG),
+            ...tags 
+        ]
     }
 
     const result = await cloudinary.uploader.upload(url, uploadOptions)
