@@ -9,7 +9,7 @@ export async function POST (req: Request){
         quality: 'default', version: Date.now()
     })
 
-    const checkStatus = async (url: string) => {
+    const checkStatus: (url: string) => Promise<boolean> = async (url: string) => {
         const response = await fetch(url)
 
         if(response.ok) {
